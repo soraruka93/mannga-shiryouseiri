@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>資料フォトライブラリ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0c0b10;
+    --surface: #161420;
+    --surface2: #1e1b2a;
+    --border: #2a2638;
+    --accent: #a78bfa;
+    --accent2: #f472b6;
+    --text: #ede9f8;
+    --text2: #9d96b8;
+    --text3: #524e6a;
+    --danger: #f87171;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(12,11,16,0.93); backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+  }
+  .logo { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--accent); letter-spacing: 0.1em; white-space: nowrap; flex-shrink: 0; }
+  .search-wrap { flex: 1; position: relative; }
+  .search-wrap input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 13px; font-family: 'Noto Sans JP', sans-serif;
+    padding: 8px 10px 8px 32px; outline: none; transition: border-color 0.2s;
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 13px; pointer-events: none; }
+  .header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .view-toggle { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .view-btn { background: transparent; border: none; color: var(--text3); font-size: 15px; padding: 7px 10px; cursor: pointer; transition: all 0.15s; }
+  .view-btn.active { background: var(--surface2); color: var(--accent); }
+  .btn-primary { background: var(--accent); border: none; border-radius: 8px; color: #0c0b10; font-size: 14px; font-weight: 700; font-family: 'Noto Sans JP', sans-serif; padding: 8px 14px; cursor: pointer; }
+  .btn-primary:active { opacity: 0.75; }
+
+  .filter-bar { padding: 8px 14px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+  .filter-bar::-webkit-scrollbar { display: none; }
+  .filter-row { display: flex; gap: 7px; min-width: max-content; }
+  .filter-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; color: var(--text2); font-size: 12px; font-family: 'Noto Sans JP', sans-serif; padding: 5px 12px; cursor: pointer; white-space: nowrap; transition: all 0.15s; user-select: none; }
+  .filter-chip.active { background: var(--accent); border-color: var(--accent); color: #0c0b10; font-weight: 700; }
+  .filter-chip:active { transform: scale(0.95); }
+
+  .stats-bar { display: flex; gap: 14px; padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .stats-bar span { color: var(--accent); }
+
+  /* グリッド */
+  .work-section { margin-bottom: 2px; }
+  .work-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 4px; }
+  .work-title { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; }
+  .work-count { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .scene-label { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; padding: 2px 14px 3px; letter-spacing: 0.08em; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 0 2px; }
+  @media (min-width: 480px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+  .photo-item { position: relative; aspect-ratio: 1; overflow: hidden; cursor: pointer; background: var(--surface); }
+  .photo-item img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.25s; }
+  .photo-item:active img { transform: scale(1.06); }
+  .photo-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 55%); opacity: 0; transition: opacity 0.2s; display: flex; align-items: flex-end; padding: 5px; }
+  .photo-item:hover .photo-overlay { opacity: 1; }
+  .photo-cat-tag { font-size: 9px; background: rgba(167,139,250,0.88); color: #0c0b10; border-radius: 3px; padding: 2px 5px; font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .star-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.55); border: none; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; z-index: 2; transition: transform 0.15s; }
+  .star-btn:active { transform: scale(1.35); }
+
+  /* リスト */
+  .list-view { padding: 6px; }
+  .list-item { display: flex; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px; margin-bottom: 6px; cursor: pointer; transition: border-color 0.15s; }
+  .list-item:active { border-color: var(--accent); }
+  .list-thumb { width: 56px; height: 56px; border-radius: 7px; object-fit: cover; flex-shrink: 0; background: var(--surface2); }
+  .list-info { flex: 1; min-width: 0; }
+  .list-work { font-size: 11px; color: var(--accent); font-weight: 700; margin-bottom: 2px; }
+  .list-scene { font-size: 13px; font-weight: 500; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .list-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+  .list-tag { font-size: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text2); padding: 1px 7px; }
+  .list-star { font-size: 18px; flex-shrink: 0; cursor: pointer; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); font-size: 14px; line-height: 1.9; }
+  .empty-icon { font-size: 38px; margin-bottom: 10px; }
+
+  /* モーダル */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 200; align-items: flex-end; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--surface); border-top: 1px solid var(--border); border-radius: 18px 18px 0 0; width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; padding: 20px 18px 32px; animation: slideUp 0.22s ease; }
+  @keyframes slideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+  .modal h2 { font-size: 15px; font-weight: 700; color: var(--accent); margin-bottom: 14px; }
+  .modal label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 4px; margin-top: 12px; }
+  .modal input, .modal select, .modal textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; font-family: 'Noto Sans JP', sans-serif; padding: 9px 11px; outline: none; transition: border-color 0.2s; }
+  .modal input:focus, .modal select:focus, .modal textarea:focus { border-color: var(--accent); }
+  .modal select option { background: var(--surface); }
+  .modal textarea { resize: vertical; min-height: 56px; }
+  .hint { font-size: 10px; color: var(--text3); margin-top: 3px; }
+  .preview-wrap { width: 100%; aspect-ratio: 16/9; border: 2px dashed var(--border); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-top: 8px; overflow: hidden; cursor: pointer; background: var(--bg); transition: border-color 0.2s; }
+  .preview-wrap:hover { border-color: var(--accent); }
+  .preview-wrap img { width: 100%; height: 100%; object-fit: contain; }
+  .preview-placeholder { text-align: center; color: var(--text3); font-size: 13px; line-height: 1.6; }
+  .preview-placeholder span { font-size: 26px; display: block; margin-bottom: 4px; }
+  .modal-btns { display: flex; gap: 8px; margin-top: 18px; }
+  .btn-cancel { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text2); font-size: 14px; font-family: 'Noto Sans JP', sans-serif; padding: 10px; cursor: pointer; }
+  .btn-save { flex: 2; background: var(--accent); border: none; border-radius: 8px; color: #0c0b10; font-size: 14px; font-weight: 700; font-family: 'Noto Sans JP', sans-serif; padding: 10px; cursor: pointer; }
+
+  /* 詳細 */
+  .detail-img { width: 100%; max-height: 48vh; object-fit: contain; border-radius: 10px; background: var(--bg); margin-bottom: 12px; }
+  .detail-work { font-size: 11px; color: var(--accent); font-weight: 700; margin-bottom: 4px; }
+  .detail-scene { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .detail-meta { font-size: 12px; color: var(--text2); line-height: 1.9; }
+  .tag-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .tag-pill { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--accent2); font-size: 11px; padding: 3px 9px; }
+  .detail-btns { display: flex; gap: 8px; margin-top: 16px; }
+  .btn-delete { flex: 1; background: transparent; border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); font-size: 13px; font-family: 'Noto Sans JP', sans-serif; padding: 9px; cursor: pointer; }
+  .btn-close { flex: 2; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; font-family: 'Noto Sans JP', sans-serif; padding: 9px; cursor: pointer; }
+
+  #fileInput { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📁 REFLIB</div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="作品名・シーン・タグで検索">
+  </div>
+  <div class="header-actions">
+    <div class="view-toggle">
+      <button class="view-btn active" id="gridBtn" onclick="setView('grid')" title="グリッド">⊞</button>
+      <button class="view-btn" id="listBtn" onclick="setView('list')" title="リスト">☰</button>
+    </div>
+    <button class="btn-primary" onclick="openAddModal()">＋</button>
+  </div>
+</header>
+
+<div class="filter-bar">
+  <div class="filter-row" id="filterRow"></div>
+</div>
+
+<div class="stats-bar">
+  <div>総数 <span id="totalCount">0</span> 枚</div>
+  <div>⭐ <span id="favCount">0</span></div>
+  <div>作品 <span id="workCount">0</span></div>
+</div>
+
+<div id="mainContent"></div>
+
+<!-- 追加モーダル -->
+<div class="modal-bg" id="addModal" onclick="bgClose(event,'addModal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>✦ 写真を追加</h2>
+    <label>写真を選択（複数可）</label>
+    <div class="preview-wrap" onclick="document.getElementById('fileInput').click()">
+      <div class="preview-placeholder" id="previewPlaceholder"><span>🖼</span>タップして選択</div>
+      <img id="previewImg" style="display:none">
+    </div>
+    <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFileSelect(event)">
+    <label>作品名</label>
+    <input type="text" id="workInput" list="workList" placeholder="例：黒須さん、マッチングヒーロー">
+    <datalist id="workList"></datalist>
+    <div class="hint">過去に入力した作品名が候補に出ます</div>
+    <label>シーン</label>
+    <input type="text" id="sceneInput" list="sceneList" placeholder="例：告白、日常、病院">
+    <datalist id="sceneList"></datalist>
+    <label>カテゴリ</label>
+    <select id="categoryInput">
+      <option value="表情">表情</option>
+      <option value="ポーズ・構図">ポーズ・構図</option>
+      <option value="背景・場所">背景・場所</option>
+      <option value="衣装・小物">衣装・小物</option>
+      <option value="雰囲気・参考">雰囲気・参考</option>
+      <option value="その他">その他</option>
+    </select>
+    <label>タグ（スペース区切り）</label>
+    <input type="text" id="tagInput" placeholder="例：笑顔 夜 制服">
+    <label>メモ</label>
+    <textarea id="memoInput" placeholder="使いたいシーンやポイントなど"></textarea>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('addModal')">キャンセル</button>
+      <button class="btn-save" onclick="savePhoto()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 詳細モーダル -->
+<div class="modal-bg" id="detailModal" onclick="bgClose(event,'detailModal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="detail-work" id="detailWork"></div>
+    <div class="detail-scene" id="detailScene"></div>
+    <img id="detailImg" class="detail-img">
+    <div class="detail-meta" id="detailMeta"></div>
+    <div class="detail-btns">
+      <button class="btn-delete" onclick="deletePhoto()">🗑 削除</button>
+      <button class="btn-close" onclick="closeModal('detailModal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let photos = JSON.parse(localStorage.getItem('reflib_v2') || '[]');
+  let currentFilter = 'all';
+  let currentSearch = '';
+  let currentDetailId = null;
+  let currentView = 'grid';
+  let pendingFiles = [];
+
+  const save = () => localStorage.setItem('reflib_v2', JSON.stringify(photos));
+  const getWorks = () => [...new Set(photos.map(p => p.work).filter(Boolean))];
+  const getScenes = () => [...new Set(photos.map(p => p.scene).filter(Boolean))];
+
+  function bgClose(e, id) { if (e.target.classList.contains('modal-bg')) closeModal(id); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); if (id === 'detailModal') currentDetailId = null; }
+
+  function setView(v) {
+    currentView = v;
+    document.getElementById('gridBtn').classList.toggle('active', v === 'grid');
+    document.getElementById('listBtn').classList.toggle('active', v === 'list');
+    render();
+  }
+
+  function updateDatalist() {
+    document.getElementById('workList').innerHTML = getWorks().map(w => `<option value="${w}">`).join('');
+    document.getElementById('sceneList').innerHTML = getScenes().map(s => `<option value="${s}">`).join('');
+  }
+
+  function updateFilters() {
+    const works = getWorks();
+    const row = document.getElementById('filterRow');
+    row.innerHTML = [
+      { f: 'all', label: 'すべて' },
+      { f: 'fav', label: '⭐ お気に入り' },
+      ...works.map(w => ({ f: w, label: w }))
+    ].map(({ f, label }) =>
+      `<div class="filter-chip${currentFilter === f ? ' active' : ''}" data-f="${f}">${label}</div>`
+    ).join('');
+    row.querySelectorAll('.filter-chip').forEach(c =>
+      c.addEventListener('click', () => { currentFilter = c.dataset.f; updateFilters(); render(); })
+    );
+  }
+
+  function updateStats() {
+    document.getElementById('totalCount').textContent = photos.length;
+    document.getElementById('favCount').textContent = photos.filter(p => p.fav).length;
+    document.getElementById('workCount').textContent = getWorks().length;
+  }
+
+  function filterPhotos() {
+    let list = photos;
+    if (currentFilter === 'fav') list = list.filter(p => p.fav);
+    else if (currentFilter !== 'all') list = list.filter(p => p.work === currentFilter);
+    if (currentSearch) {
+      const q = currentSearch.toLowerCase();
+      list = list.filter(p =>
+        (p.work || '').toLowerCase().includes(q) ||
+        (p.scene || '').toLowerCase().includes(q) ||
+        (p.tags || []).some(t => t.toLowerCase().includes(q)) ||
+        (p.memo || '').toLowerCase().includes(q) ||
+        (p.category || '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }
+
+  function render() {
+    updateStats();
+    const list = filterPhotos();
+    const el = document.getElementById('mainContent');
+    if (list.length === 0) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">🌿</div>写真がまだありません<br>右上の「＋」から追加してね</div>`;
+      return;
+    }
+    currentView === 'list' ? renderList(list, el) : renderGrid(list, el);
+  }
+
+  function renderGrid(list, el) {
+    const workGroups = {};
+    list.forEach(p => {
+      const w = p.work || '未分類';
+      const s = p.scene || '—';
+      if (!workGroups[w]) workGroups[w] = {};
+      if (!workGroups[w][s]) workGroups[w][s] = [];
+      workGroups[w][s].push(p);
+    });
+    let html = '';
+    for (const [work, scenes] of Object.entries(workGroups)) {
+      const total = Object.values(scenes).reduce((a, b) => a + b.length, 0);
+      html += `<div class="work-section"><div class="work-header"><div class="work-title">▸ ${work}</div><div class="work-count">${total}枚</div></div>`;
+      for (const [scene, items] of Object.entries(scenes)) {
+        if (scene !== '—') html += `<div class="scene-label">${scene}</div>`;
+        html += `<div class="grid">${items.map(photoCard).join('')}</div>`;
+      }
+      html += `</div>`;
+    }
+    el.innerHTML = html;
+  }
+
+  function renderList(list, el) {
+    el.innerHTML = `<div class="list-view">${list.map(p => `
+      <div class="list-item" onclick="openDetail('${p.id}')">
+        <img class="list-thumb" src="${p.src}" loading="lazy">
+        <div class="list-info">
+          <div class="list-work">${p.work || '未分類'}</div>
+          <div class="list-scene">${p.scene || p.category || '—'}</div>
+          <div class="list-tags">${(p.tags || []).slice(0, 3).map(t => `<span class="list-tag">${t}</span>`).join('')}</div>
+        </div>
+        <div class="list-star" onclick="event.stopPropagation(); toggleFav('${p.id}')">${p.fav ? '⭐' : '☆'}</div>
+      </div>`).join('')}</div>`;
+  }
+
+  function photoCard(p) {
+    return `<div class="photo-item" onclick="openDetail('${p.id}')">
+      <img src="${p.src}" loading="lazy">
+      <div class="photo-overlay"><div class="photo-cat-tag">${p.category || ''}</div></div>
+      <button class="star-btn" onclick="event.stopPropagation(); toggleFav('${p.id}')">${p.fav ? '⭐' : '☆'}</button>
+    </div>`;
+  }
+
+  function toggleFav(id) {
+    const p = photos.find(x => x.id === id);
+    if (p) { p.fav = !p.fav; save(); render(); }
+  }
+
+  function openAddModal() {
+    updateDatalist();
+    ['workInput','sceneInput','tagInput','memoInput'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('previewImg').style.display = 'none';
+    document.getElementById('previewPlaceholder').style.display = 'block';
+    pendingFiles = [];
+    document.getElementById('fileInput').value = '';
+    document.getElementById('addModal').classList.add('open');
+  }
+
+  function handleFileSelect(e) {
+    pendingFiles = Array.from(e.target.files);
+    if (pendingFiles.length > 0) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = document.getElementById('previewImg');
+        img.src = ev.target.result; img.style.display = 'block';
+        document.getElementById('previewPlaceholder').style.display = 'none';
+      };
+      reader.readAsDataURL(pendingFiles[0]);
+    }
+  }
+
+  function savePhoto() {
+    if (pendingFiles.length === 0) { alert('写真を選択してください'); return; }
+    const work = document.getElementById('workInput').value.trim();
+    const scene = document.getElementById('sceneInput').value.trim();
+    const category = document.getElementById('categoryInput').value;
+    const tags = document.getElementById('tagInput').value.trim().split(/\s+/).filter(Boolean);
+    const memo = document.getElementById('memoInput').value.trim();
+    let done = 0;
+    pendingFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        photos.unshift({
+          id: Date.now() + '_' + Math.random().toString(36).slice(2),
+          src: ev.target.result, work, scene, category, tags, memo,
+          fav: false, date: new Date().toLocaleDateString('ja-JP')
+        });
+        if (++done === pendingFiles.length) { save(); updateFilters(); render(); closeModal('addModal'); }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function openDetail(id) {
+    const p = photos.find(x => x.id === id);
+    if (!p) return;
+    currentDetailId = id;
+    document.getElementById('detailWork').textContent = p.work || '未分類';
+    document.getElementById('detailScene').textContent = p.scene || p.category || '—';
+    document.getElementById('detailImg').src = p.src;
+    document.getElementById('detailMeta').innerHTML = `
+      <strong>カテゴリ</strong>：${p.category || '—'}<br>
+      <strong>登録日</strong>：${p.date}<br>
+      ${p.memo ? `<strong>メモ</strong>：${p.memo}<br>` : ''}
+      ${p.tags.length ? `<div class="tag-list">${p.tags.map(t => `<span class="tag-pill">${t}</span>`).join('')}</div>` : ''}
+    `;
+    document.getElementById('detailModal').classList.add('open');
+  }
+
+  function deletePhoto() {
+    if (!currentDetailId || !confirm('この写真を削除しますか？')) return;
+    photos = photos.filter(p => p.id !== currentDetailId);
+    save(); updateFilters(); render(); closeModal('detailModal');
+  }
+
+  document.getElementById('searchInput').addEventListener('input', e => { currentSearch = e.target.value; render(); });
+
+  updateFilters();
+  render();
+</script>
+</body>
+</html>
