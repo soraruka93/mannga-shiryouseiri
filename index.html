@@ -55,7 +55,6 @@
   .stats-bar { display: flex; gap: 14px; padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; }
   .stats-bar span { color: var(--accent); }
 
-  /* グリッド */
   .work-section { margin-bottom: 2px; }
   .work-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 4px; }
   .work-title { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; }
@@ -72,7 +71,6 @@
   .star-btn { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.55); border: none; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; z-index: 2; transition: transform 0.15s; }
   .star-btn:active { transform: scale(1.35); }
 
-  /* リスト */
   .list-view { padding: 6px; }
   .list-item { display: flex; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px; margin-bottom: 6px; cursor: pointer; transition: border-color 0.15s; }
   .list-item:active { border-color: var(--accent); }
@@ -87,7 +85,6 @@
   .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); font-size: 14px; line-height: 1.9; }
   .empty-icon { font-size: 38px; margin-bottom: 10px; }
 
-  /* モーダル */
   .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 200; align-items: flex-end; justify-content: center; }
   .modal-bg.open { display: flex; }
   .modal { background: var(--surface); border-top: 1px solid var(--border); border-radius: 18px 18px 0 0; width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; padding: 20px 18px 32px; animation: slideUp 0.22s ease; }
@@ -109,7 +106,6 @@
   .btn-cancel { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text2); font-size: 14px; font-family: 'Noto Sans JP', sans-serif; padding: 10px; cursor: pointer; }
   .btn-save { flex: 2; background: var(--accent); border: none; border-radius: 8px; color: #0c0b10; font-size: 14px; font-weight: 700; font-family: 'Noto Sans JP', sans-serif; padding: 10px; cursor: pointer; }
 
-  /* 詳細 */
   .detail-img { width: 100%; max-height: 48vh; object-fit: contain; border-radius: 10px; background: var(--bg); margin-bottom: 12px; }
   .detail-work { font-size: 11px; color: var(--accent); font-weight: 700; margin-bottom: 4px; }
   .detail-scene { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
@@ -152,7 +148,6 @@
 
 <div id="mainContent"></div>
 
-<!-- 追加モーダル -->
 <div class="modal-bg" id="addModal" onclick="bgClose(event,'addModal')">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -190,7 +185,6 @@
   </div>
 </div>
 
-<!-- 詳細モーダル -->
 <div class="modal-bg" id="detailModal" onclick="bgClose(event,'detailModal')">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -329,6 +323,25 @@
     if (p) { p.fav = !p.fav; save(); render(); }
   }
 
+  function compressImage(file, callback) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if (w > h) { if (w > MAX) { h = h * MAX / w; w = MAX; } }
+        else { if (h > MAX) { w = w * MAX / h; h = MAX; } }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        callback(canvas.toDataURL('image/jpeg', 0.75));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
   function openAddModal() {
     updateDatalist();
     ['workInput','sceneInput','tagInput','memoInput'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
@@ -361,16 +374,14 @@
     const memo = document.getElementById('memoInput').value.trim();
     let done = 0;
     pendingFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = ev => {
+      compressImage(file, src => {
         photos.unshift({
           id: Date.now() + '_' + Math.random().toString(36).slice(2),
-          src: ev.target.result, work, scene, category, tags, memo,
+          src, work, scene, category, tags, memo,
           fav: false, date: new Date().toLocaleDateString('ja-JP')
         });
         if (++done === pendingFiles.length) { save(); updateFilters(); render(); closeModal('addModal'); }
-      };
-      reader.readAsDataURL(file);
+      });
     });
   }
 
