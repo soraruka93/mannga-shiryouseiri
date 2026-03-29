@@ -23,12 +23,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-  header {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(12,11,16,0.93); backdrop-filter: blur(14px);
-    border-bottom: 1px solid var(--border);
-    padding: 10px 14px; display: flex; align-items: center; gap: 10px;
-  }
+  header { position: sticky; top: 0; z-index: 100; background: rgba(12,11,16,0.93); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
   .logo { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--accent); letter-spacing: 0.1em; white-space: nowrap; flex-shrink: 0; }
   .search-wrap { flex: 1; position: relative; }
   .search-wrap input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; font-family: 'Noto Sans JP', sans-serif; padding: 8px 10px 8px 32px; outline: none; transition: border-color 0.2s; }
@@ -110,6 +105,7 @@
   .tag-pill { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--accent2); font-size: 11px; padding: 3px 9px; }
   .detail-btns { display: flex; gap: 8px; margin-top: 16px; }
   .btn-delete { flex: 1; background: transparent; border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); font-size: 13px; font-family: 'Noto Sans JP', sans-serif; padding: 9px; cursor: pointer; }
+  .btn-edit { flex: 1; background: transparent; border: 1px solid var(--accent); border-radius: 8px; color: var(--accent); font-size: 13px; font-family: 'Noto Sans JP', sans-serif; padding: 9px; cursor: pointer; }
   .btn-close { flex: 2; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; font-family: 'Noto Sans JP', sans-serif; padding: 9px; cursor: pointer; }
 
   #fileInput { display: none; }
@@ -190,7 +186,36 @@
     <div class="detail-meta" id="detailMeta"></div>
     <div class="detail-btns">
       <button class="btn-delete" onclick="deletePhoto()">🗑 削除</button>
+      <button class="btn-edit" onclick="openEditModal()">✏️ 編集</button>
       <button class="btn-close" onclick="closeModal('detailModal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="editModal" onclick="bgClose(event,'editModal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>✏️ 編集</h2>
+    <label>作品名</label>
+    <input type="text" id="editWorkInput" list="workList" placeholder="例：黒須さん">
+    <label>シーン</label>
+    <input type="text" id="editSceneInput" list="sceneList" placeholder="例：告白、日常">
+    <label>カテゴリ</label>
+    <select id="editCategoryInput">
+      <option value="表情">表情</option>
+      <option value="ポーズ・構図">ポーズ・構図</option>
+      <option value="背景・場所">背景・場所</option>
+      <option value="衣装・小物">衣装・小物</option>
+      <option value="雰囲気・参考">雰囲気・参考</option>
+      <option value="その他">その他</option>
+    </select>
+    <label>タグ（スペース区切り）</label>
+    <input type="text" id="editTagInput" placeholder="例：笑顔 夜 制服">
+    <label>メモ</label>
+    <textarea id="editMemoInput" placeholder="使いたいシーンやポイントなど"></textarea>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal('editModal')">キャンセル</button>
+      <button class="btn-save" onclick="saveEdit()">保存</button>
     </div>
   </div>
 </div>
@@ -204,12 +229,8 @@
   let pendingFiles = [];
 
   const save = () => {
-    try {
-      localStorage.setItem('reflib_v2', JSON.stringify(photos));
-      return true;
-    } catch(e) {
-      return false;
-    }
+    try { localStorage.setItem('reflib_v2', JSON.stringify(photos)); return true; }
+    catch(e) { return false; }
   };
 
   const getWorks = () => [...new Set(photos.map(p => p.work).filter(Boolean))];
@@ -398,6 +419,30 @@
         }
       });
     });
+  }
+
+  function openEditModal() {
+    const p = photos.find(x => x.id === currentDetailId);
+    if (!p) return;
+    updateDatalist();
+    document.getElementById('editWorkInput').value = p.work || '';
+    document.getElementById('editSceneInput').value = p.scene || '';
+    document.getElementById('editCategoryInput').value = p.category || 'その他';
+    document.getElementById('editTagInput').value = (p.tags || []).join(' ');
+    document.getElementById('editMemoInput').value = p.memo || '';
+    closeModal('detailModal');
+    document.getElementById('editModal').classList.add('open');
+  }
+
+  function saveEdit() {
+    const p = photos.find(x => x.id === currentDetailId);
+    if (!p) return;
+    p.work = document.getElementById('editWorkInput').value.trim();
+    p.scene = document.getElementById('editSceneInput').value.trim();
+    p.category = document.getElementById('editCategoryInput').value;
+    p.tags = document.getElementById('editTagInput').value.trim().split(/\s+/).filter(Boolean);
+    p.memo = document.getElementById('editMemoInput').value.trim();
+    save(); updateFilters(); render(); closeModal('editModal');
   }
 
   function openDetail(id) {
