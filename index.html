@@ -31,11 +31,7 @@
   }
   .logo { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--accent); letter-spacing: 0.1em; white-space: nowrap; flex-shrink: 0; }
   .search-wrap { flex: 1; position: relative; }
-  .search-wrap input {
-    width: 100%; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text); font-size: 13px; font-family: 'Noto Sans JP', sans-serif;
-    padding: 8px 10px 8px 32px; outline: none; transition: border-color 0.2s;
-  }
+  .search-wrap input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; font-family: 'Noto Sans JP', sans-serif; padding: 8px 10px 8px 32px; outline: none; transition: border-color 0.2s; }
   .search-wrap input:focus { border-color: var(--accent); }
   .search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 13px; pointer-events: none; }
   .header-actions { display: flex; gap: 8px; flex-shrink: 0; }
@@ -373,10 +369,10 @@
     const tags = document.getElementById('tagInput').value.trim().split(/\s+/).filter(Boolean);
     const memo = document.getElementById('memoInput').value.trim();
     let done = 0;
-    pendingFiles.forEach(file => {
+    pendingFiles.forEach((file, index) => {
       compressImage(file, src => {
         photos.unshift({
-          id: Date.now() + '_' + Math.random().toString(36).slice(2),
+          id: Date.now() + '_' + index + '_' + Math.random().toString(36).slice(2),
           src, work, scene, category, tags, memo,
           fav: false, date: new Date().toLocaleDateString('ja-JP')
         });
